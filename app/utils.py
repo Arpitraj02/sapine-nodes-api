@@ -99,6 +99,9 @@ def rate_limit(requests_per_minute: int = 60):
     """
     Simple rate limiting decorator.
     In production, use Redis for distributed rate limiting.
+    
+    Note: This in-memory implementation automatically cleans old entries on each request.
+    For high-traffic production use, implement Redis-based rate limiting.
     """
     def decorator(func):
         @wraps(func)
@@ -117,7 +120,8 @@ def rate_limit(requests_per_minute: int = 60):
                 client_ip = request.client.host if request.client else "unknown"
                 current_time = time.time()
                 
-                # Clean old entries
+                # Clean old entries (removes entries older than 60 seconds)
+                # This prevents unbounded memory growth
                 rate_limit_storage[client_ip] = [
                     t for t in rate_limit_storage[client_ip]
                     if current_time - t < 60

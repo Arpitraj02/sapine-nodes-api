@@ -74,7 +74,11 @@ if [ ! -f ".env" ]; then
     cp .env.example .env
     
     # Generate a random JWT secret
-    JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || python3 -c "import secrets; print(secrets.token_hex(32))")
+    JWT_SECRET=$(openssl rand -hex 32 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        echo -e "${YELLOW}OpenSSL not available, using Python to generate secret...${NC}"
+        JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+    fi
     
     # Update .env with generated secret
     if [[ "$OSTYPE" == "darwin"* ]]; then

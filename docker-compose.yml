@@ -37,8 +37,9 @@ services:
       # Database
       DATABASE_URL: postgresql://sapine:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/sapine_bots
       
-      # JWT Configuration
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-please-change-this-in-production}
+      # JWT Configuration - REQUIRED: Set JWT_SECRET_KEY in .env file
+      # Generate with: openssl rand -hex 32
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env file}
       JWT_ALGORITHM: HS256
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 1440
       

@@ -113,8 +113,10 @@ def create_container(
     
     # Security: Resource limits
     mem_limit = ram_limit
-    cpu_quota = int(float(cpu_limit.replace("m", "")) * 100000)  # Convert to CPU quota
+    # CPU limit is provided as a decimal string (e.g., "0.5" for 50% of one CPU)
+    # Convert to CPU quota: cpu_quota = cpu_limit * cpu_period
     cpu_period = 100000
+    cpu_quota = int(float(cpu_limit) * cpu_period)
     
     try:
         # Pull image if not available
