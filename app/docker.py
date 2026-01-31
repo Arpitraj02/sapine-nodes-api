@@ -28,17 +28,17 @@ def get_docker_client() -> docker.DockerClient:
     Uses explicit unix socket to avoid http+docker scheme issues in Docker SDK 7.0.0+.
     
     Note: This function explicitly ignores DOCKER_HOST environment variable to prevent
-    issues with unsupported URL schemes like "http+docker://".
+    issues with unsupported URL schemes like "http+docker://". The DOCKER_HOST is 
+    permanently cleared for this process as we always use the explicit unix socket.
     """
     global _docker_client
     if _docker_client is None:
         try:
-            # Save and clear DOCKER_HOST to prevent http+docker:// scheme issues
-            original_docker_host = os.environ.get('DOCKER_HOST')
-            if original_docker_host:
-                # Temporarily clear DOCKER_HOST to avoid http+docker:// issues
-                os.environ.pop('DOCKER_HOST', None)
-                logger.info(f"Cleared DOCKER_HOST={original_docker_host} to use explicit unix socket")
+            # Clear DOCKER_HOST to prevent http+docker:// scheme issues
+            # We permanently clear this for the process since we always use explicit unix socket
+            cleared_docker_host = os.environ.pop('DOCKER_HOST', None)
+            if cleared_docker_host:
+                logger.info(f"Cleared DOCKER_HOST={cleared_docker_host} to use explicit unix socket")
             
             # Use explicit unix socket instead of from_env() to avoid http+docker scheme issue
             # This works with both Docker SDK 6.x and 7.x
