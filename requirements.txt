@@ -14,8 +14,8 @@ passlib[argon2]==1.7.4
 argon2-cffi==23.1.0
 
 # Docker
-# Note: Using 6.1.3 instead of 7.0.0+ due to breaking change in URL scheme handling
-# Docker 7.0.0 removed support for "http+docker" scheme used by docker.from_env()
+# Note: Using explicit unix socket in code to support both Docker SDK 6.x and 7.x
+# Docker 7.0.0+ removed support for "http+docker" scheme in from_env()
 docker==6.1.3
 
 # WebSockets
