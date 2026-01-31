@@ -55,7 +55,7 @@ A production-ready backend for a multi-user bot hosting platform with secure Doc
 
 ### Authentication & Authorization
 - JWT-based authentication
-- Password hashing with bcrypt
+- Password hashing with Argon2 (PHC winner, memory-hard)
 - Role-based access control (RBAC)
 - User status checks (ACTIVE/SUSPENDED)
 - Audit logging for sensitive actions
@@ -72,7 +72,7 @@ A production-ready backend for a multi-user bot hosting platform with secure Doc
 - **ORM**: SQLAlchemy
 - **Container Runtime**: Docker (docker-py)
 - **Authentication**: JWT (python-jose)
-- **Password Hashing**: bcrypt (passlib)
+- **Password Hashing**: Argon2 (argon2-cffi, passlib)
 - **WebSockets**: FastAPI native
 - **Server**: Uvicorn
 
