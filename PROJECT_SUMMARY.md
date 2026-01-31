@@ -148,7 +148,7 @@ sapine-nodes-api/
 ### 3. Authentication (auth.py)
 
 - JWT token generation with expiration
-- Bcrypt password hashing
+- Argon2 password hashing (PHC winner, memory-hard)
 - Role-based access control decorators
 - User status verification on every request
 - HTTP Bearer token scheme

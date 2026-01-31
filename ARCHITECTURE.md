@@ -17,7 +17,7 @@
 │  │  Authentication (app/auth.py)                             │  │
 │  │  - JWT Token Generation/Validation                        │  │
 │  │  - Role-Based Access Control (RBAC)                       │  │
-│  │  - Password Hashing (bcrypt)                              │  │
+│  │  - Password Hashing (Argon2)                              │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  Bot Management (app/bots.py)                             │  │
@@ -150,7 +150,7 @@ Client → WS /bots/{id}/logs?token=JWT → sockets.py (verify JWT)
 ┌─────────────────────────────────────────────────────────────────┐
 │  Layer 4: Database Security                                      │
 │  - Parameterized Queries (ORM)                                   │
-│  - Password Hashing (bcrypt)                                     │
+│  - Password Hashing (Argon2)                                     │
 │  - Connection Pooling                                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -251,7 +251,7 @@ sapine-nodes-api/
 │  Database: PostgreSQL (via SQLAlchemy 2.0.25)               │
 │  Container: Docker (via docker-py 7.0.0)                     │
 │  Auth: JWT (via python-jose 3.3.0)                           │
-│  Password: bcrypt (via passlib 1.7.4)                        │
+│  Password: Argon2 (via argon2-cffi 23.1.0 + passlib 1.7.4)  │
 │  WebSocket: FastAPI native + websockets 12.0                 │
 │  Server: Uvicorn 0.27.0                                      │
 └─────────────────────────────────────────────────────────────┘

@@ -96,7 +96,8 @@ alembic==1.13.1               ✅ No known vulnerabilities
 ### Authentication Dependencies
 ```
 python-jose[cryptography]==3.3.0  ⚠️  Monitor for updates
-passlib[bcrypt]==1.7.4            ✅ No known vulnerabilities
+passlib[argon2]==1.7.4            ✅ No known vulnerabilities
+argon2-cffi==23.1.0               ✅ No known vulnerabilities
 ```
 
 ### Container & WebSocket

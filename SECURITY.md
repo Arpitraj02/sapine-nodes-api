@@ -88,11 +88,13 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
 
 ### Password Hashing
 ```python
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 ```
-- Passwords hashed with bcrypt
+- Passwords hashed with Argon2 (winner of Password Hashing Competition)
 - Never stored in plaintext
-- Salted automatically by bcrypt
+- Salted automatically by Argon2
+- No password length limitations (unlike bcrypt's 72-byte limit)
+- Memory-hard algorithm resistant to GPU and ASIC attacks
 
 ### Role-Based Access Control (RBAC)
 ```python
@@ -288,7 +290,7 @@ user = db.query(User).filter(User.email == email).first()
 ```python
 password_hash = Column(String(255), nullable=False)
 ```
-- Passwords hashed with bcrypt
+- Passwords hashed with Argon2
 - Original passwords never stored
 - Hashes cannot be reversed
 
