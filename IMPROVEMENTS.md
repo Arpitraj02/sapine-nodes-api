@@ -14,6 +14,11 @@ This document tracks potential improvements and enhancements for the Sapine Bot 
 8. **Root API Endpoint** - Welcome page with API information
 9. **Enhanced Logging** - Beautiful startup/shutdown messages
 10. **Quick Reference Card** - Easy command reference
+11. **Fixed Docker SDK 7.x Compatibility** - Resolved "http+docker URL scheme not supported" error
+    - Code now explicitly clears problematic DOCKER_HOST environment variables
+    - Uses explicit Unix socket connection for maximum compatibility
+    - Supports both Docker SDK 6.x and 7.x
+    - Added comprehensive error handling for Docker connection issues
 
 ## 🎯 Recommended Next Steps
 
