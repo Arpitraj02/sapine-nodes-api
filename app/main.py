@@ -214,8 +214,8 @@ async def health_check():
     # Check Docker connection
     docker_status = "unknown"
     try:
-        import docker
-        client = docker.from_env()
+        from app.docker import get_docker_client
+        client = get_docker_client()
         client.ping()
         docker_status = "healthy"
     except Exception as e:
