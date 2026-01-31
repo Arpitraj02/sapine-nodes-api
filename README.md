@@ -528,6 +528,62 @@ Container IDs are treated as internal implementation details and are never expos
 ### Audit Trail
 All security-sensitive actions are logged with user ID, action type, target resource, IP address, and timestamp.
 
+## Troubleshooting
+
+### Error: "URL scheme 'http+docker' not supported"
+
+**Problem**: You see an error message like:
+```
+error while fetching server API version
+URL scheme "http+docker" not supported
+```
+
+**Cause**: This error occurs when the `DOCKER_HOST` environment variable is set to use the `http+docker://` URL scheme, which was removed in Docker SDK 7.0.0+.
+
+**Solution**: This has been fixed in the latest version of the code. The application now:
+1. Explicitly uses Unix socket (`unix:///var/run/docker.sock`) to connect to Docker
+2. Automatically clears any problematic `DOCKER_HOST` environment variable
+3. Supports both Docker SDK 6.x and 7.x
+
+If you still encounter this error:
+1. Update to the latest version of the code
+2. Ensure Docker is running: `sudo systemctl status docker`
+3. Check Docker socket permissions: `ls -la /var/run/docker.sock`
+4. Manually unset DOCKER_HOST if needed: `unset DOCKER_HOST`
+
+### Docker Connection Issues
+
+**Problem**: Cannot connect to Docker daemon
+
+**Solution**:
+```bash
+# Check if Docker is running
+sudo systemctl status docker
+
+# Start Docker if not running
+sudo systemctl start docker
+
+# Add your user to docker group (optional, for non-root access)
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### Database Connection Issues
+
+**Problem**: Cannot connect to PostgreSQL
+
+**Solution**:
+```bash
+# Check if PostgreSQL container is running
+docker ps | grep postgres
+
+# Check database logs
+docker logs sapine-db
+
+# Restart PostgreSQL
+docker-compose restart postgres
+```
+
 ## License
 
 This project is proprietary software. All rights reserved.
