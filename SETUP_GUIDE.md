@@ -175,6 +175,25 @@ PORT=8000
 
 ## 🎯 Testing the API
 
+### Quick Test Script
+
+Run the automated test script to verify everything works:
+
+```bash
+./test-api.sh
+```
+
+This will test:
+- ✅ Root endpoint
+- ✅ Health check
+- ✅ User registration
+- ✅ User login
+- ✅ User profile retrieval
+- ✅ Invalid credentials handling
+- ✅ Duplicate registration prevention
+
+### Manual Testing
+
 ### 1. Check Health
 
 ```bash

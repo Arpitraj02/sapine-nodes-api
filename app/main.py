@@ -150,7 +150,45 @@ async def shutdown_event():
     """
     Cleanup on shutdown.
     """
-    logger.info("Shutting down Sapine Bot Hosting API...")
+    logger.info("=" * 70)
+    logger.info("👋 Shutting down Sapine Bot Hosting API...")
+    logger.info("=" * 70)
+
+
+# Root endpoint
+@app.get("/")
+async def root():
+    """
+    Root endpoint with API information and quick links.
+    """
+    port = int(os.getenv("PORT", "8000"))
+    return {
+        "message": "Welcome to Sapine Bot Hosting Platform API",
+        "version": "1.0.0",
+        "status": "online",
+        "documentation": f"http://localhost:{port}/docs",
+        "health_check": f"http://localhost:{port}/health",
+        "endpoints": {
+            "auth": {
+                "register": "POST /auth/register",
+                "login": "POST /auth/login",
+                "profile": "GET /auth/me"
+            },
+            "bots": {
+                "list": "GET /bots",
+                "create": "POST /bots",
+                "details": "GET /bots/{bot_id}",
+                "start": "POST /bots/{bot_id}/start",
+                "stop": "POST /bots/{bot_id}/stop",
+                "delete": "DELETE /bots/{bot_id}"
+            },
+            "admin": {
+                "users": "GET /admin/users",
+                "suspend": "POST /admin/users/{user_id}/suspend",
+                "activate": "POST /admin/users/{user_id}/activate"
+            }
+        }
+    }
 
 
 # Health check endpoint
@@ -206,17 +244,29 @@ async def register(
     """
     Register a new user account.
     
-    Creates user with USER role and ACTIVE status by default.
-    Returns JWT access token.
+    **Requirements:**
+    - Email must be valid format
+    - Password must be at least 8 characters
+    
+    **Returns:**
+    - JWT access token for immediate authentication
+    
+    **Example:**
+    ```json
+    {
+        "email": "user@example.com",
+        "password": "secure_password_123"
+    }
+    ```
     """
     # Validate email format
     if not validate_email(user_data.email):
-        raise BadRequestException("Invalid email format")
+        raise BadRequestException("Invalid email format. Please provide a valid email address.")
     
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
-        raise ConflictException("Email already registered")
+        raise ConflictException("This email is already registered. Please login or use a different email.")
     
     # Create user
     user = User(
@@ -253,28 +303,41 @@ async def login(
     """
     Login with email and password.
     
-    Returns JWT access token on successful authentication.
+    **Returns:**
+    - JWT access token on successful authentication
+    
+    **Example:**
+    ```json
+    {
+        "email": "user@example.com",
+        "password": "secure_password_123"
+    }
+    ```
+    
+    **Errors:**
+    - 401: Invalid credentials
+    - 403: Account suspended
     """
     # Find user
     user = db.query(User).filter(User.email == credentials.email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            detail="Invalid email or password. Please check your credentials and try again."
         )
     
     # Verify password
     if not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            detail="Invalid email or password. Please check your credentials and try again."
         )
     
     # Check if user is suspended
     if user.status == UserStatus.SUSPENDED:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account suspended. Contact administrator."
+            detail="Your account has been suspended. Please contact the administrator for assistance."
         )
     
     # Create audit log
