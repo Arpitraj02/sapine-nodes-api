@@ -1,0 +1,982 @@
+# SAPINE BOT HOSTING PLATFORM - API TESTING MANUAL
+
+This guide provides step-by-step cURL commands to test all API endpoints.
+Follow this guide to register users, manage bots, and test the complete workflow.
+
+## Prerequisites
+
+1. API server running at https://api.sapinenodes.qzz.io (or your server URL)
+2. curl installed (test with: `curl --version`)
+3. jq installed for JSON formatting (optional): `sudo apt-get install jq`
+4. wscat for WebSocket testing (optional): `npm install -g wscat`
+
+Set your API URL (change if using a different server):
+```bash
+export API_URL="https://api.sapinenodes.qzz.io"
+```
+
+## 1. Health Check
+
+Test if the API is running:
+
+```bash
+curl $API_URL/health
+```
+
+Expected Response:
+```json
+{
+  "status": "healthy",
+  "service": "sapine-bot-hosting"
+}
+```
+
+If this fails, ensure the server is running and accessible.
+
+## 2. User Registration
+
+Register a new user account:
+
+```bash
+curl -X POST $API_URL/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "testuser@example.com",
+    "password": "SecurePass123"
+  }'
+```
+
+Expected Response (200 Created):
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImV4cCI6MTcwNjc4...",
+  "token_type": "bearer"
+}
+```
+
+**SAVE YOUR TOKEN!** You'll need it for all subsequent requests.
+
+```bash
+export TOKEN="paste_your_token_here"
+```
+
+Example with automatic token extraction (requires jq):
+
+```bash
+export TOKEN=$(curl -s -X POST $API_URL/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testuser@example.com","password":"SecurePass123"}' \
+  | jq -r '.access_token')
+
+echo "Token saved: ${TOKEN:0:20}..."
+```
+
+**Notes:**
+- Email must be unique
+- Password must be at least 8 characters
+- If email is already registered, you'll get a 409 Conflict error
+
+Error Response (409 Conflict):
+```json
+{
+  "detail": "Email already registered"
+}
+```
+
+## 3. User Login
+
+Login with existing credentials:
+
+```bash
+curl -X POST $API_URL/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "testuser@example.com",
+    "password": "SecurePass123"
+  }'
+```
+
+Expected Response (200 OK):
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+Login with token extraction:
+
+```bash
+export TOKEN=$(curl -s -X POST $API_URL/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testuser@example.com","password":"SecurePass123"}' \
+  | jq -r '.access_token')
+```
+
+Error Response (401 Unauthorized - Wrong Password):
+```json
+{
+  "detail": "Invalid email or password"
+}
+```
+
+## 4. Get Current User Info
+
+Get information about the authenticated user:
+
+```bash
+curl -X GET $API_URL/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Expected Response (200 OK):
+```json
+{
+  "id": 1,
+  "email": "testuser@example.com",
+  "role": "USER",
+  "status": "ACTIVE",
+  "created_at": "2024-01-31T10:30:00.123456"
+}
+```
+
+Error Response (401 Unauthorized - Invalid Token):
+```json
+{
+  "detail": "Invalid or expired token"
+}
+```
+
+## 5. Create a Bot
+
+Create a Python bot:
+
+```bash
+curl -X POST $API_URL/bots \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-discord-bot",
+    "runtime": "python",
+    "start_cmd": "python bot.py",
+    "plan_id": 1
+  }'
+```
+
+Expected Response (201 Created):
+```json
+{
+  "id": 1,
+  "name": "my-discord-bot",
+  "runtime": "python",
+  "status": "CREATED",
+  "start_cmd": "python bot.py",
+  "source_type": null,
+  "created_at": "2024-01-31T10:35:00.123456"
+}
+```
+
+Save the bot ID for future requests:
+
+```bash
+export BOT_ID=1
+```
+
+Create a Node.js bot:
+
+```bash
+curl -X POST $API_URL/bots \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "telegram-bot",
+    "runtime": "node",
+    "start_cmd": "node index.js",
+    "plan_id": 1
+  }'
+```
+
+**Bot Name Requirements:**
+- 3-50 characters
+- Letters, numbers, hyphens, underscores only
+- Must be unique per user
+
+Error Response (400 Bad Request - Invalid Name):
+```json
+{
+  "detail": "Invalid bot name. Use 3-50 alphanumeric characters, hyphens, or underscores."
+}
+```
+
+Error Response (409 Conflict - Name Already Exists):
+```json
+{
+  "detail": "A bot with this name already exists"
+}
+```
+
+## 6. List User's Bots
+
+Get all bots for the current user:
+
+```bash
+curl -X GET $API_URL/bots \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Expected Response (200 OK):
+```json
+{
+  "bots": [
+    {
+      "id": 1,
+      "name": "my-discord-bot",
+      "runtime": "python",
+      "status": "CREATED",
+      "start_cmd": "python bot.py",
+      "source_type": null,
+      "created_at": "2024-01-31T10:35:00.123456"
+    },
+    {
+      "id": 2,
+      "name": "telegram-bot",
+      "runtime": "node",
+      "status": "RUNNING",
+      "start_cmd": "node index.js",
+      "source_type": "zip",
+      "created_at": "2024-01-31T10:40:00.123456"
+    }
+  ],
+  "total": 2
+}
+```
+
+## 7. Upload Bot Code - Single File
+
+Create a simple Python bot file:
+
+```bash
+echo 'import time
+print("Bot started successfully!")
+while True:
+    print(f"Bot running at {time.strftime(\"%H:%M:%S\")}")
+    time.sleep(5)' > /tmp/bot.py
+```
+
+Upload the file:
+
+```bash
+curl -X POST $API_URL/bots/$BOT_ID/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/tmp/bot.py"
+```
+
+Expected Response (200 OK):
+```json
+{
+  "message": "Files uploaded successfully",
+  "filename": "bot.py"
+}
+```
+
+Create a Node.js bot:
+
+```bash
+echo 'console.log("Bot started!");
+setInterval(() => {
+    console.log("Bot running:", new Date().toISOString());
+}, 5000);' > /tmp/index.js
+```
+
+Upload:
+
+```bash
+curl -X POST $API_URL/bots/$BOT_ID/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/tmp/index.js"
+```
+
+## 8. Upload Bot Code - ZIP Archive
+
+Create a Python bot with dependencies:
+
+```bash
+mkdir -p /tmp/my-bot
+cd /tmp/my-bot
+
+# Create main bot file
+cat > main.py << 'EOF'
+import requests
+import time
+
+print("Bot with dependencies starting...")
+response = requests.get("https://api.github.com")
+print(f"API Status: {response.status_code}")
+
+while True:
+    print(f"Bot running: {time.strftime('%H:%M:%S')}")
+    time.sleep(10)
+EOF
+
+# Create requirements file
+cat > requirements.txt << 'EOF'
+requests==2.31.0
+EOF
+
+# Create zip archive
+zip -r bot.zip main.py requirements.txt
+
+# Upload
+curl -X POST $API_URL/bots/$BOT_ID/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@bot.zip"
+```
+
+Expected Response:
+```json
+{
+  "message": "Files uploaded successfully",
+  "filename": "bot.zip"
+}
+```
+
+Create a Node.js bot with packages:
+
+```bash
+mkdir -p /tmp/node-bot
+cd /tmp/node-bot
+
+# Create main file
+cat > index.js << 'EOF'
+const axios = require('axios');
+
+console.log("Node bot starting...");
+
+setInterval(async () => {
+    console.log("Bot tick:", new Date().toISOString());
+}, 5000);
+EOF
+
+# Create package.json
+cat > package.json << 'EOF'
+{
+  "name": "telegram-bot",
+  "version": "1.0.0",
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
+EOF
+
+# Create zip
+zip -r bot.zip index.js package.json
+
+# Upload
+curl -X POST $API_URL/bots/$BOT_ID/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@bot.zip"
+```
+
+**Allowed File Extensions:**
+- Python: .py, .txt, .json, .yaml, .yml
+- Node.js: .js, .json, .ts
+
+Error Response (400 Bad Request - Invalid File):
+```json
+{
+  "detail": "Invalid file type"
+}
+```
+
+## 9. Start a Bot
+
+Start the bot container:
+
+```bash
+curl -X POST $API_URL/bots/$BOT_ID/start \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Expected Response (200 OK):
+```json
+{
+  "id": 1,
+  "name": "my-discord-bot",
+  "runtime": "python",
+  "status": "RUNNING",
+  "start_cmd": "python bot.py",
+  "source_type": "zip",
+  "created_at": "2024-01-31T10:35:00.123456"
+}
+```
+
+**Note:** Status changes from CREATED to RUNNING
+
+Error Response (400 Bad Request - No Code Uploaded):
+```json
+{
+  "detail": "No code has been uploaded for this bot"
+}
+```
+
+Error Response (400 Bad Request - Already Running):
+```json
+{
+  "detail": "Bot is already running"
+}
+```
+
+## 10. Stop a Bot
+
+Stop a running bot:
+
+```bash
+curl -X POST $API_URL/bots/$BOT_ID/stop \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Expected Response (200 OK):
+```json
+{
+  "id": 1,
+  "name": "my-discord-bot",
+  "runtime": "python",
+  "status": "STOPPED",
+  "start_cmd": "python bot.py",
+  "source_type": "zip",
+  "created_at": "2024-01-31T10:35:00.123456"
+}
+```
+
+**Note:** Status changes to STOPPED
+
+Error Response (400 Bad Request - Not Running):
+```json
+{
+  "detail": "Bot is not running"
+}
+```
+
+## 11. Restart a Bot
+
+Restart a bot (stop and start):
+
+```bash
+curl -X POST $API_URL/bots/$BOT_ID/restart \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Expected Response (200 OK):
+```json
+{
+  "id": 1,
+  "name": "my-discord-bot",
+  "runtime": "python",
+  "status": "RUNNING",
+  "start_cmd": "python bot.py",
+  "source_type": "zip",
+  "created_at": "2024-01-31T10:35:00.123456"
+}
+```
+
+**Note:** This works whether the bot is running or stopped
+
+## 12. Stream Bot Logs - WebSocket
+
+Bot logs are streamed in real-time via WebSocket.
+
+### Option A: Using wscat (CLI tool)
+
+```bash
+# Install wscat if needed
+npm install -g wscat
+
+# Connect to logs (replace with wss:// for HTTPS)
+wscat -c "wss://api.sapinenodes.qzz.io/bots/$BOT_ID/logs?token=$TOKEN"
+
+# You'll see real-time output:
+# Connected (press CTRL+C to quit)
+# < Bot started successfully!
+# < Bot running at 15:30:00
+# < Bot running at 15:30:05
+# < Bot running at 15:30:10
+```
+
+### Option B: Using Python
+
+```python
+import asyncio
+import websockets
+import sys
+
+async def stream_logs(bot_id, token):
+    uri = f"wss://api.sapinenodes.qzz.io/bots/{bot_id}/logs?token={token}"
+    
+    try:
+        async with websockets.connect(uri) as websocket:
+            print(f"Connected to bot {bot_id} logs")
+            print("=" * 50)
+            async for message in websocket:
+                print(message)
+    except websockets.exceptions.ConnectionClosed:
+        print("\nConnection closed")
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage: python stream_logs.py <bot_id> <token>")
+        sys.exit(1)
+    
+    bot_id = sys.argv[1]
+    token = sys.argv[2]
+    asyncio.run(stream_logs(bot_id, token))
+```
+
+### Option C: Using JavaScript/Node.js
+
+```javascript
+const WebSocket = require('ws');
+
+const botId = process.argv[2];
+const token = process.argv[3];
+
+if (!botId || !token) {
+    console.log('Usage: node stream_logs.js <bot_id> <token>');
+    process.exit(1);
+}
+
+const ws = new WebSocket(`wss://api.sapinenodes.qzz.io/bots/${botId}/logs?token=${token}`);
+
+ws.on('open', () => {
+    console.log(`Connected to bot ${botId} logs`);
+    console.log('='.repeat(50));
+});
+
+ws.on('message', (data) => {
+    console.log(data.toString());
+});
+
+ws.on('error', (error) => {
+    console.error('WebSocket error:', error.message);
+});
+
+ws.on('close', () => {
+    console.log('\nConnection closed');
+});
+```
+
+Error Response (401 Unauthorized - Invalid Token):
+- Connection closed with code 1008 (policy violation)
+
+Error Response (403 Forbidden - Not Your Bot):
+- Connection closed with code 1008 (policy violation)
+
+Error Response (404 Not Found - Bot Doesn't Exist):
+- Connection closed with code 1008 (policy violation)
+
+## 13. Get Bot Details
+
+Get details about a specific bot:
+
+```bash
+curl -X GET $API_URL/bots/$BOT_ID \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Note:** This endpoint may not exist in current version. Use list bots instead.
+
+## 14. Delete a Bot
+
+Permanently delete a bot and its data:
+
+```bash
+curl -X DELETE $API_URL/bots/$BOT_ID \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Expected Response: 204 No Content (empty response)
+
+This will:
+- Stop the bot if running
+- Delete the Docker container
+- Remove all uploaded files
+- Delete the database record
+
+Error Response (404 Not Found):
+```json
+{
+  "detail": "Bot not found"
+}
+```
+
+Error Response (403 Forbidden - Not Your Bot):
+```json
+{
+  "detail": "You don't have access to this bot"
+}
+```
+
+## 15. Admin Endpoints (ADMIN/OWNER ONLY)
+
+These endpoints require ADMIN or OWNER role.
+
+### List All Users
+
+```bash
+curl -X GET $API_URL/admin/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Expected Response (200 OK):
+```json
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "user1@example.com",
+      "role": "USER",
+      "status": "ACTIVE",
+      "created_at": "2024-01-31T10:00:00.123456"
+    },
+    {
+      "id": 2,
+      "email": "admin@example.com",
+      "role": "ADMIN",
+      "status": "ACTIVE",
+      "created_at": "2024-01-30T09:00:00.123456"
+    }
+  ],
+  "total": 2
+}
+```
+
+### Suspend a User
+
+```bash
+curl -X POST $API_URL/admin/users/1/suspend \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Expected Response (200 OK):
+```json
+{
+  "message": "User user1@example.com has been suspended"
+}
+```
+
+### Activate a User
+
+```bash
+curl -X POST $API_URL/admin/users/1/activate \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Expected Response (200 OK):
+```json
+{
+  "message": "User user1@example.com has been activated"
+}
+```
+
+Error Response (403 Forbidden - Not Admin):
+```json
+{
+  "detail": "Admin access required"
+}
+```
+
+## 16. Complete Workflow Test Script
+
+Here's a complete bash script to test the entire workflow:
+
+```bash
+#!/bin/bash
+
+set -e
+
+API_URL="${API_URL:-https://api.sapinenodes.qzz.io}"
+EMAIL="test_$(date +%s)@example.com"
+PASSWORD="TestPassword123"
+
+echo "=========================================="
+echo "Sapine API Complete Workflow Test"
+echo "=========================================="
+echo ""
+
+# 1. Health Check
+echo "1. Testing health endpoint..."
+curl -s $API_URL/health | jq
+echo ""
+
+# 2. Register User
+echo "2. Registering user: $EMAIL"
+REGISTER_RESPONSE=$(curl -s -X POST $API_URL/auth/register \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
+
+TOKEN=$(echo $REGISTER_RESPONSE | jq -r '.access_token')
+echo "Token: ${TOKEN:0:30}..."
+echo ""
+
+# 3. Get User Info
+echo "3. Getting user info..."
+curl -s $API_URL/auth/me \
+  -H "Authorization: Bearer $TOKEN" | jq
+echo ""
+
+# 4. Create Bot
+echo "4. Creating bot..."
+BOT_RESPONSE=$(curl -s -X POST $API_URL/bots \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "test-bot",
+    "runtime": "python",
+    "start_cmd": "python main.py",
+    "plan_id": 1
+  }')
+
+BOT_ID=$(echo $BOT_RESPONSE | jq -r '.id')
+echo "Bot created with ID: $BOT_ID"
+echo $BOT_RESPONSE | jq
+echo ""
+
+# 5. Create Bot Code
+echo "5. Creating bot code..."
+cat > /tmp/main.py << 'PYEOF'
+import time
+print("Test bot started!")
+for i in range(5):
+    print(f"Iteration {i+1}")
+    time.sleep(2)
+print("Test bot completed!")
+PYEOF
+
+# 6. Upload Code
+echo "6. Uploading bot code..."
+curl -s -X POST $API_URL/bots/$BOT_ID/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/tmp/main.py" | jq
+echo ""
+
+# 7. Start Bot
+echo "7. Starting bot..."
+curl -s -X POST $API_URL/bots/$BOT_ID/start \
+  -H "Authorization: Bearer $TOKEN" | jq
+echo ""
+
+# 8. List Bots
+echo "8. Listing bots..."
+curl -s $API_URL/bots \
+  -H "Authorization: Bearer $TOKEN" | jq
+echo ""
+
+# 9. Wait
+echo "9. Waiting 15 seconds for bot to run..."
+sleep 15
+
+# 10. Stop Bot
+echo "10. Stopping bot..."
+curl -s -X POST $API_URL/bots/$BOT_ID/stop \
+  -H "Authorization: Bearer $TOKEN" | jq
+echo ""
+
+# 11. Restart Bot
+echo "11. Restarting bot..."
+curl -s -X POST $API_URL/bots/$BOT_ID/restart \
+  -H "Authorization: Bearer $TOKEN" | jq
+echo ""
+
+# 12. Wait
+echo "12. Waiting 10 seconds..."
+sleep 10
+
+# 13. Stop Bot
+echo "13. Stopping bot again..."
+curl -s -X POST $API_URL/bots/$BOT_ID/stop \
+  -H "Authorization: Bearer $TOKEN" | jq
+echo ""
+
+# 14. Delete Bot
+echo "14. Deleting bot..."
+curl -s -X DELETE $API_URL/bots/$BOT_ID \
+  -H "Authorization: Bearer $TOKEN"
+echo "Bot deleted (204 No Content)"
+echo ""
+
+# Cleanup
+rm -f /tmp/main.py
+
+echo "=========================================="
+echo "✓ Complete workflow test finished!"
+echo "=========================================="
+```
+
+## 17. Error Responses Reference
+
+### 400 Bad Request
+Invalid request data, validation errors  
+Example: Invalid bot name, missing required fields
+
+### 401 Unauthorized
+Missing or invalid authentication token  
+Example: No Authorization header, expired token
+
+### 403 Forbidden
+Valid authentication but insufficient permissions  
+Example: User trying to access admin endpoints, accessing another user's bot
+
+### 404 Not Found
+Resource doesn't exist  
+Example: Bot ID doesn't exist, invalid endpoint
+
+### 409 Conflict
+Resource conflict  
+Example: Email already registered, bot name already exists
+
+### 429 Too Many Requests
+Rate limit exceeded  
+Example: Too many login attempts
+
+### 500 Internal Server Error
+Server error (should be rare)  
+Example: Database connection failed, unexpected error
+
+## 18. Tips and Best Practices
+
+1. **Save Your Token:**
+   - Store in environment variable: `export TOKEN="your_token"`
+   - Tokens expire after 24 hours by default
+   - Get a new token by logging in again
+
+2. **Use jq for Better Output:**
+   - Install: `sudo apt-get install jq`
+   - Pipe responses: `curl ... | jq`
+   - Extract fields: `curl ... | jq -r '.access_token'`
+
+3. **Set Base URL:**
+   - For production: `export API_URL="https://api.sapinenodes.qzz.io"`
+   - For local: `export API_URL="http://localhost:8000"`
+
+4. **Check Response Codes:**
+   - Add `-i` flag to see headers: `curl -i ...`
+   - Add `-v` flag for verbose: `curl -v ...`
+   - Add `-w "\n%{http_code}\n"` to see status code
+
+5. **File Uploads:**
+   - Use `@` prefix for files: `-F "file=@/path/to/file"`
+   - Zip files must contain valid bot code
+   - Check allowed file extensions per runtime
+
+6. **WebSocket Testing:**
+   - Use `wscat` for quick tests
+   - Use Python/Node scripts for automation
+   - Tokens are passed in query string: `?token=YOUR_TOKEN`
+   - Use `wss://` for HTTPS endpoints, `ws://` for HTTP
+
+7. **Rate Limiting:**
+   - Default: 60 requests per minute per IP
+   - Some endpoints have lower limits (e.g., register: 5/min)
+   - Wait 60 seconds if rate limited
+
+8. **Security:**
+   - Never commit tokens to version control
+   - Use HTTPS in production
+   - Use strong passwords (8+ characters)
+   - Keep tokens secure
+
+## 19. Troubleshooting
+
+### "Connection refused"
+- Check if API server is running
+- Verify correct URL and port
+- Check firewall settings
+
+### "Invalid or expired token"
+- Token expired (24 hour default)
+- Log in again to get new token
+- Check token is correctly set: `echo $TOKEN`
+
+### "Bot not found"
+- Bot doesn't exist or was deleted
+- Check bot ID: `curl $API_URL/bots -H "Authorization: Bearer $TOKEN"`
+- Verify you're using the correct user account
+
+### "No code has been uploaded"
+- Upload code before starting bot
+- Check upload was successful
+- Verify file was not empty
+
+### WebSocket connection fails
+- Check token is valid
+- Use `ws://` for HTTP, `wss://` for HTTPS
+- Verify bot exists and you have access
+
+## 20. API Documentation
+
+For interactive API documentation, visit:
+- **Swagger UI:** https://api.sapinenodes.qzz.io/docs
+- **ReDoc:** https://api.sapinenodes.qzz.io/redoc
+
+This provides:
+- Complete API reference
+- Try-it-out functionality
+- Request/response schemas
+- Authentication testing
+
+## Quick Command Reference
+
+```bash
+# Setup
+export API_URL="https://api.sapinenodes.qzz.io"
+export TOKEN="your_token_here"
+export BOT_ID="1"
+
+# Health check
+curl $API_URL/health
+
+# Register
+curl -X POST $API_URL/auth/register -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+
+# Login
+curl -X POST $API_URL/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+
+# Create bot
+curl -X POST $API_URL/bots -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"my-bot","runtime":"python","start_cmd":"python bot.py","plan_id":1}'
+
+# Upload code
+curl -X POST $API_URL/bots/$BOT_ID/upload \
+  -H "Authorization: Bearer $TOKEN" -F "file=@bot.py"
+
+# Start bot
+curl -X POST $API_URL/bots/$BOT_ID/start -H "Authorization: Bearer $TOKEN"
+
+# Stop bot
+curl -X POST $API_URL/bots/$BOT_ID/stop -H "Authorization: Bearer $TOKEN"
+
+# Restart bot
+curl -X POST $API_URL/bots/$BOT_ID/restart -H "Authorization: Bearer $TOKEN"
+
+# Stream logs (use wss:// for HTTPS)
+wscat -c "wss://api.sapinenodes.qzz.io/bots/$BOT_ID/logs?token=$TOKEN"
+
+# Delete bot
+curl -X DELETE $API_URL/bots/$BOT_ID -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## Additional Resources
+
+For more information:
+- **README.md** - Project overview and setup
+- **API_TESTING.md** - Detailed API testing guide
+- **deployment.md** - Production deployment guide
+- **Swagger Docs** - Interactive API documentation at `/docs`
+
+Happy Testing! 🚀
