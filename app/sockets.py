@@ -26,8 +26,14 @@ async def get_current_user_ws(token: str, db: Session) -> User:
     """
     try:
         payload = decode_token(token)
-        user_id = payload.get("sub")
-        if user_id is None:
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
+            return None
+        
+        try:
+            user_id = int(user_id_str)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid user ID format in WebSocket token: {user_id_str}")
             return None
         
         user = db.query(User).filter(User.id == user_id).first()
