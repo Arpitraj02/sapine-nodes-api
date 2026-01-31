@@ -98,7 +98,7 @@ def get_current_user(
     except (ValueError, TypeError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload"
+            detail="Invalid user ID in token"
         )
     
     user = db.query(User).filter(User.id == user_id).first()
