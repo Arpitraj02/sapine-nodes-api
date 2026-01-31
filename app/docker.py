@@ -26,17 +26,31 @@ def get_docker_client() -> docker.DockerClient:
     """
     Get or create Docker client singleton.
     Uses explicit unix socket to avoid http+docker scheme issues in Docker SDK 7.0.0+.
+    
+    Note: This function explicitly ignores DOCKER_HOST environment variable to prevent
+    issues with unsupported URL schemes like "http+docker://".
     """
     global _docker_client
     if _docker_client is None:
         try:
+            # Save and clear DOCKER_HOST to prevent http+docker:// scheme issues
+            original_docker_host = os.environ.get('DOCKER_HOST')
+            if original_docker_host:
+                # Temporarily clear DOCKER_HOST to avoid http+docker:// issues
+                os.environ.pop('DOCKER_HOST', None)
+                logger.info(f"Cleared DOCKER_HOST={original_docker_host} to use explicit unix socket")
+            
             # Use explicit unix socket instead of from_env() to avoid http+docker scheme issue
             # This works with both Docker SDK 6.x and 7.x
             # Note: unix:/// with three slashes specifies an absolute path
             _docker_client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
+            logger.info("Docker client connected successfully via unix:///var/run/docker.sock")
         except DockerException as e:
             logger.error(f"Failed to connect to Docker: {e}")
-            raise RuntimeError("Docker service unavailable")
+            raise RuntimeError(f"Docker service unavailable: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error connecting to Docker: {e}")
+            raise RuntimeError(f"Failed to initialize Docker client: {str(e)}")
     return _docker_client
 
 
