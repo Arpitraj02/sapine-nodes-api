@@ -618,7 +618,7 @@ DB_USER="sapine_prod"
 mkdir -p $BACKUP_DIR
 
 # If using Docker Compose PostgreSQL:
-docker exec sapine-db pg_dump -U sapine -d sapine_bots > $BACKUP_DIR/backup_$DATE.sql
+docker exec sapine-db pg_dump -U $DB_USER -d $DB_NAME > $BACKUP_DIR/backup_$DATE.sql
 
 # If using system PostgreSQL:
 # sudo -u postgres pg_dump $DB_NAME > $BACKUP_DIR/backup_$DATE.sql
@@ -712,8 +712,8 @@ docker-compose ps postgres
 
 # Test database connection
 psql postgresql://sapine_prod:password@localhost:5432/sapine_bots_prod
-# or
-docker exec -it sapine-db psql -U sapine -d sapine_bots
+# or (replace with your actual credentials from .env)
+docker exec -it sapine-db psql -U sapine_prod -d sapine_bots_prod
 
 # Check database logs
 docker-compose logs postgres
@@ -859,8 +859,8 @@ docker-compose ps
 sudo journalctl -u sapine-api -f
 docker-compose logs -f api
 
-# Database access
-docker exec -it sapine-db psql -U sapine -d sapine_bots
+# Database access (use your actual credentials from .env)
+docker exec -it sapine-db psql -U sapine_prod -d sapine_bots_prod
 
 # Check health
 curl http://localhost:8000/health
