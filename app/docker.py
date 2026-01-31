@@ -32,7 +32,8 @@ def get_docker_client() -> docker.DockerClient:
         try:
             # Use explicit unix socket instead of from_env() to avoid http+docker scheme issue
             # This works with both Docker SDK 6.x and 7.x
-            _docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
+            # Note: unix:/// with three slashes specifies an absolute path
+            _docker_client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
         except DockerException as e:
             logger.error(f"Failed to connect to Docker: {e}")
             raise RuntimeError("Docker service unavailable")
