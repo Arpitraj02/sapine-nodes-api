@@ -87,45 +87,62 @@ async def startup_event():
     """
     Initialize database and create default data on startup.
     """
-    logger.info("Starting Sapine Bot Hosting API...")
+    logger.info("=" * 70)
+    logger.info("🚀 Starting Sapine Bot Hosting API...")
+    logger.info("=" * 70)
     
-    # Initialize database tables
-    init_db()
-    logger.info("Database initialized")
-    
-    # Create default plans if they don't exist
-    from app.db import get_db_context
-    with get_db_context() as db:
-        # Check if plans exist
-        plan_count = db.query(Plan).count()
-        if plan_count == 0:
-            # Create default plans
-            default_plans = [
-                Plan(
-                    name="Free",
-                    max_bots=1,
-                    cpu_limit="0.5",
-                    ram_limit="256m"
-                ),
-                Plan(
-                    name="Basic",
-                    max_bots=3,
-                    cpu_limit="1.0",
-                    ram_limit="512m"
-                ),
-                Plan(
-                    name="Pro",
-                    max_bots=10,
-                    cpu_limit="2.0",
-                    ram_limit="1g"
-                ),
-            ]
-            for plan in default_plans:
-                db.add(plan)
-            db.commit()
-            logger.info("Default plans created")
-    
-    logger.info("Application started successfully")
+    try:
+        # Initialize database tables
+        init_db()
+        logger.info("✓ Database initialized successfully")
+        
+        # Create default plans if they don't exist
+        from app.db import get_db_context
+        with get_db_context() as db:
+            # Check if plans exist
+            plan_count = db.query(Plan).count()
+            if plan_count == 0:
+                # Create default plans
+                default_plans = [
+                    Plan(
+                        name="Free",
+                        max_bots=1,
+                        cpu_limit="0.5",
+                        ram_limit="256m"
+                    ),
+                    Plan(
+                        name="Basic",
+                        max_bots=3,
+                        cpu_limit="1.0",
+                        ram_limit="512m"
+                    ),
+                    Plan(
+                        name="Pro",
+                        max_bots=10,
+                        cpu_limit="2.0",
+                        ram_limit="1g"
+                    ),
+                ]
+                for plan in default_plans:
+                    db.add(plan)
+                db.commit()
+                logger.info("✓ Default plans created (Free, Basic, Pro)")
+            else:
+                logger.info(f"✓ Found {plan_count} existing plan(s)")
+        
+        # Log startup info
+        port = int(os.getenv("PORT", "8000"))
+        host = os.getenv("HOST", "0.0.0.0")
+        logger.info("=" * 70)
+        logger.info("✓ Application started successfully!")
+        logger.info(f"📖 API Documentation: http://localhost:{port}/docs")
+        logger.info(f"🔍 Alternative Docs: http://localhost:{port}/redoc")
+        logger.info(f"❤️  Health Check: http://localhost:{port}/health")
+        logger.info("=" * 70)
+        
+    except Exception as e:
+        logger.error(f"✗ Startup failed: {e}", exc_info=True)
+        raise
 
 
 @app.on_event("shutdown")
@@ -133,7 +150,45 @@ async def shutdown_event():
     """
     Cleanup on shutdown.
     """
-    logger.info("Shutting down Sapine Bot Hosting API...")
+    logger.info("=" * 70)
+    logger.info("👋 Shutting down Sapine Bot Hosting API...")
+    logger.info("=" * 70)
+
+
+# Root endpoint
+@app.get("/")
+async def root():
+    """
+    Root endpoint with API information and quick links.
+    """
+    port = int(os.getenv("PORT", "8000"))
+    return {
+        "message": "Welcome to Sapine Bot Hosting Platform API",
+        "version": "1.0.0",
+        "status": "online",
+        "documentation": f"http://localhost:{port}/docs",
+        "health_check": f"http://localhost:{port}/health",
+        "endpoints": {
+            "auth": {
+                "register": "POST /auth/register",
+                "login": "POST /auth/login",
+                "profile": "GET /auth/me"
+            },
+            "bots": {
+                "list": "GET /bots",
+                "create": "POST /bots",
+                "details": "GET /bots/{bot_id}",
+                "start": "POST /bots/{bot_id}/start",
+                "stop": "POST /bots/{bot_id}/stop",
+                "delete": "DELETE /bots/{bot_id}"
+            },
+            "admin": {
+                "users": "GET /admin/users",
+                "suspend": "POST /admin/users/{user_id}/suspend",
+                "activate": "POST /admin/users/{user_id}/activate"
+            }
+        }
+    }
 
 
 # Health check endpoint
@@ -141,8 +196,41 @@ async def shutdown_event():
 async def health_check():
     """
     Health check endpoint for monitoring.
+    Returns service status and basic system information.
     """
-    return {"status": "healthy", "service": "sapine-bot-hosting"}
+    from app.db import get_db_context
+    
+    # Check database connection
+    db_status = "unknown"
+    try:
+        with get_db_context() as db:
+            from sqlalchemy import text
+            db.execute(text("SELECT 1"))
+            db_status = "healthy"
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        db_status = "unhealthy"
+    
+    # Check Docker connection
+    docker_status = "unknown"
+    try:
+        import docker
+        client = docker.from_env()
+        client.ping()
+        docker_status = "healthy"
+    except Exception as e:
+        logger.error(f"Docker health check failed: {e}")
+        docker_status = "unhealthy"
+    
+    return {
+        "status": "healthy" if db_status == "healthy" else "degraded",
+        "service": "sapine-bot-hosting",
+        "version": "1.0.0",
+        "components": {
+            "database": db_status,
+            "docker": docker_status
+        }
+    }
 
 
 # Auth endpoints
@@ -156,17 +244,29 @@ async def register(
     """
     Register a new user account.
     
-    Creates user with USER role and ACTIVE status by default.
-    Returns JWT access token.
+    **Requirements:**
+    - Email must be valid format
+    - Password must be at least 8 characters
+    
+    **Returns:**
+    - JWT access token for immediate authentication
+    
+    **Example:**
+    ```json
+    {
+        "email": "user@example.com",
+        "password": "secure_password_123"
+    }
+    ```
     """
     # Validate email format
     if not validate_email(user_data.email):
-        raise BadRequestException("Invalid email format")
+        raise BadRequestException("Invalid email format. Please provide a valid email address.")
     
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
-        raise ConflictException("Email already registered")
+        raise ConflictException("This email is already registered. Please login or use a different email.")
     
     # Create user
     user = User(
@@ -203,28 +303,41 @@ async def login(
     """
     Login with email and password.
     
-    Returns JWT access token on successful authentication.
+    **Returns:**
+    - JWT access token on successful authentication
+    
+    **Example:**
+    ```json
+    {
+        "email": "user@example.com",
+        "password": "secure_password_123"
+    }
+    ```
+    
+    **Errors:**
+    - 401: Invalid credentials
+    - 403: Account suspended
     """
     # Find user
     user = db.query(User).filter(User.email == credentials.email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            detail="Invalid email or password. Please check your credentials and try again."
         )
     
     # Verify password
     if not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            detail="Invalid email or password. Please check your credentials and try again."
         )
     
     # Check if user is suspended
     if user.status == UserStatus.SUSPENDED:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account suspended. Contact administrator."
+            detail="Your account has been suspended. Please contact the administrator for assistance."
         )
     
     # Create audit log

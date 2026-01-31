@@ -78,13 +78,37 @@ A production-ready backend for a multi-user bot hosting platform with secure Doc
 
 ## Installation
 
-### Quick Start (Automatic Setup)
+### 🚀 One-Click Setup (Recommended)
 
-For rapid setup and development, use our automatic setup script:
+**NEW!** We now have a bulletproof one-click installer that handles everything:
 
 ```bash
 git clone https://github.com/Arpitraj02/sapine-nodes-api.git
 cd sapine-nodes-api
+./install.sh
+```
+
+Then start the API:
+
+```bash
+./start.sh
+```
+
+**✅ What's Fixed:**
+- ✅ Pydantic email validation library issue - **SOLVED!**
+- ✅ Automatic dependency installation
+- ✅ Auto-generated secure credentials
+- ✅ Database setup and initialization
+- ✅ Docker container management
+- ✅ One command to rule them all!
+
+**📖 Need help?** See [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed instructions and troubleshooting.
+
+### Quick Start (Legacy Script)
+
+Alternatively, use the original setup script:
+
+```bash
 ./setup.sh
 ```
 
@@ -93,11 +117,12 @@ This script will automatically:
 - Install Docker and docker-compose
 - Create a PostgreSQL container
 - Generate secure credentials and .env file
-- Install Python dependencies
+- Install Python dependencies (including email-validator)
 - Initialize the database
 - Start the FastAPI application
 
 **Documentation:**
+- [SETUP_GUIDE.md](SETUP_GUIDE.md) - **NEW!** Comprehensive setup guide with troubleshooting
 - [Testing.txt](Testing.txt) - Complete cURL-based testing guide for all endpoints
 - [deployment.md](deployment.md) - Step-by-step VPS deployment guide
 

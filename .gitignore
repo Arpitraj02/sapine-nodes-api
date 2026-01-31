@@ -47,6 +47,8 @@ logs/
 
 # Bot data
 /var/lib/bots/
+bot_storage/
+test_venv/
 
 # OS
 .DS_Store
