@@ -78,13 +78,38 @@ A production-ready backend for a multi-user bot hosting platform with secure Doc
 
 ## Installation
 
-### Prerequisites
+### Quick Start (Automatic Setup)
+
+For rapid setup and development, use our automatic setup script:
+
+```bash
+git clone https://github.com/Arpitraj02/sapine-nodes-api.git
+cd sapine-nodes-api
+./setup.sh
+```
+
+This script will automatically:
+- Install Python, pip, and virtualenv
+- Install Docker and docker-compose
+- Create a PostgreSQL container
+- Generate secure credentials and .env file
+- Install Python dependencies
+- Initialize the database
+- Start the FastAPI application
+
+**Documentation:**
+- [Testing.txt](Testing.txt) - Complete cURL-based testing guide for all endpoints
+- [deployment.md](deployment.md) - Step-by-step VPS deployment guide
+
+### Manual Setup
+
+#### Prerequisites
 - Python 3.11 or higher
 - PostgreSQL 12 or higher
 - Docker Engine
 - Git
 
-### Setup
+#### Setup Steps
 
 1. Clone the repository:
 ```bash
@@ -139,6 +164,37 @@ The API will be available at `http://localhost:8000`
 Once running, visit:
 - Interactive API docs: `http://localhost:8000/docs`
 - Alternative docs: `http://localhost:8000/redoc`
+
+## Testing
+
+### Complete Testing Guide
+
+For comprehensive cURL-based testing of all endpoints, see [Testing.txt](Testing.txt).
+
+The guide includes:
+- User registration and authentication
+- Bot creation and management
+- Code upload (single files and zip archives)
+- Bot lifecycle operations (start/stop/restart)
+- WebSocket log streaming
+- Admin endpoints
+- Complete workflow test script
+- Error handling examples
+- Troubleshooting tips
+
+### Quick Test
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Register user
+curl -X POST http://localhost:8000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"TestPass123"}'
+```
+
+For detailed testing instructions with example requests and responses, refer to [Testing.txt](Testing.txt).
 
 ## API Endpoints
 
@@ -270,7 +326,51 @@ Three plans are created on first startup:
 
 ## Deployment
 
-### Docker Deployment (Recommended)
+### Production Deployment on Ubuntu VPS
+
+For complete step-by-step production deployment instructions, see [deployment.md](deployment.md).
+
+The guide covers:
+- Ubuntu VPS setup and security configuration
+- Docker and PostgreSQL installation
+- SSL/TLS with Let's Encrypt
+- Nginx reverse proxy setup
+- Systemd service configuration
+- Firewall setup with UFW
+- Monitoring and maintenance
+- Backup strategies
+
+Quick deployment with Docker Compose:
+
+```bash
+# On your VPS
+git clone https://github.com/Arpitraj02/sapine-nodes-api.git
+cd sapine-nodes-api
+
+# Configure environment
+cp .env.example .env
+vim .env  # Set production values
+
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+```
+
+### Docker Deployment (Development)
+
+The included `docker-compose.yml` provides a complete development environment:
+
+```bash
+docker-compose up -d
+```
+
+This starts:
+- PostgreSQL database on port 5432
+- FastAPI application on port 8000
+
+Manual Docker setup:
 
 Create a `Dockerfile`:
 ```dockerfile
@@ -407,6 +507,19 @@ All security-sensitive actions are logged with user ID, action type, target reso
 
 This project is proprietary software. All rights reserved.
 
+## Documentation
+
+- **[README.md](README.md)** - Project overview and setup instructions
+- **[Testing.txt](Testing.txt)** - Complete cURL-based testing guide for all endpoints
+- **[deployment.md](deployment.md)** - Production deployment guide for Ubuntu VPS
+- **[API_TESTING.md](API_TESTING.md)** - Detailed API testing examples
+- **[SECURITY.md](SECURITY.md)** - Security guidelines and best practices
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design
+- **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)** - Project overview and features
+
 ## Support
 
-For issues and questions, please open an issue on GitHub or contact the development team.
+For issues and questions:
+- Open an issue on [GitHub](https://github.com/Arpitraj02/sapine-nodes-api/issues)
+- Check the documentation files listed above
+- Review the interactive API docs at `/docs`
