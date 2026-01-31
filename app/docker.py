@@ -86,9 +86,14 @@ def get_bot_storage_path(bot_id: int) -> Path:
     """
     Get the storage path for a bot's files.
     Creates directory if it doesn't exist.
+    
+    Returns an absolute path to ensure Docker treats it as a bind mount
+    rather than a named volume.
     """
     base_path = Path(os.getenv("BOT_STORAGE_PATH", "/var/lib/bots"))
-    bot_path = base_path / str(bot_id)
+    # Resolve to absolute path to ensure Docker treats it as a bind mount
+    # Relative paths like "bot_storage/1" are treated as named volumes by Docker
+    bot_path = (base_path / str(bot_id)).resolve()
     bot_path.mkdir(parents=True, exist_ok=True)
     return bot_path
 
