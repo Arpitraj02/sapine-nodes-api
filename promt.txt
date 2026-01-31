@@ -1,0 +1,221 @@
+You are a senior Python backend engineer and systems architect.
+
+TASK:
+Build a COMPLETE backend from scratch for a MULTI-USER BOT HOSTING PLATFORM
+(similar to Render / Railway / Pella.host), with SAFE Docker execution.
+
+This is NOT a demo.
+This API will be used by untrusted public users.
+Security and correctness are mandatory.
+
+========================
+CORE PURPOSE
+========================
+Users should be able to:
+- Create an account
+- Select a bot runtime (Python, Node.js)
+- Upload their bot code (zip / single file / requirements.txt)
+- Configure a start command (within limits)
+- Start / stop / restart their bot
+- View a live console (logs) for their bot
+
+Each bot runs in its OWN Docker container.
+Users must NEVER access Docker directly.
+
+========================
+TECH STACK (MANDATORY)
+========================
+- Language: Python 3.11+
+- Framework: FastAPI
+- Database: PostgreSQL
+- ORM: SQLAlchemy or SQLModel
+- Container Runtime: Docker (docker-py)
+- Auth: JWT
+- WebSockets: FastAPI native
+- Server: Uvicorn
+
+========================
+ARCHITECTURE RULES
+========================
+- Database is the source of truth
+- One Docker container per bot
+- container_id is INTERNAL ONLY (never exposed)
+- API controls Docker through a SAFE abstraction
+- Role-based access control:
+  - USER: only own bots
+  - ADMIN: moderation
+  - OWNER: infrastructure
+- Minimal file count (no enterprise bloat)
+
+========================
+FILE STRUCTURE (KEEP IT SMALL)
+========================
+app/
+├── main.py        # FastAPI app + routes
+├── auth.py        # JWT auth + RBAC
+├── db.py          # DB engine & session
+├── models.py      # DB models
+├── docker.py      # SAFE Docker abstraction
+├── bots.py        # Bot endpoints + logic
+├── sockets.py    # WebSocket log streaming
+└── utils.py       # Errors, helpers, validators
+
+========================
+DATABASE MODELS (REQUIRED)
+========================
+User:
+- id
+- email
+- password_hash
+- role (USER | ADMIN | OWNER)
+- status (ACTIVE | SUSPENDED)
+- created_at
+
+Plan:
+- id
+- name
+- max_bots
+- cpu_limit
+- ram_limit
+
+Bot:
+- id
+- user_id
+- plan_id
+- runtime
+- name
+- container_id (INTERNAL)
+- status (CREATED | RUNNING | STOPPED | CRASHED)
+- start_cmd
+- source_type (zip | file)
+- created_at
+
+AuditLog:
+- id
+- user_id
+- action
+- target_id
+- ip_address
+- created_at
+
+========================
+RUNTIME SYSTEM (IMPORTANT)
+========================
+Users select a RUNTIME, NOT a Docker image.
+
+Implement an INTERNAL runtime registry, for example:
+
+python:
+- image: python:3.11-slim
+- build_step: pip install -r requirements.txt
+- default_start: python main.py
+
+node:
+- image: node:20-alpine
+- build_step: npm install
+- default_start: node index.js
+
+Users:
+- CAN select runtime
+- CAN override start command (validated)
+- CANNOT provide Docker images
+- CANNOT provide Dockerfiles
+
+========================
+SOURCE UPLOAD SYSTEM
+========================
+Allow users to upload:
+- .zip archives
+- single source files (.py, .js)
+- dependency files (requirements.txt, package.json)
+
+On upload:
+- Extract server-side
+- Store in /var/lib/bots/{bot_id}/
+- Never execute user files on host
+- Never trust filenames blindly
+
+========================
+BUILD & RUN LOGIC
+========================
+Implement SAFE build & run:
+
+Option A (Preferred):
+- Use prebuilt runtime images
+- Mount user code into /app
+- Run build steps INSIDE container
+
+Users click START:
+- API validates ownership
+- API creates container (if not exists)
+- API starts container
+- DB status updated
+
+========================
+CONSOLE / LOGS
+========================
+Implement per-bot console:
+- Read-only logs
+- WebSocket-based
+- docker logs -f
+- Auth + ownership required
+- One socket per bot
+
+NO interactive shell.
+NO docker exec exposed.
+
+========================
+SECURITY REQUIREMENTS (NON-NEGOTIABLE)
+========================
+- No privileged containers
+- Drop ALL Linux capabilities
+- Apply CPU & RAM limits
+- No shell injection
+- Validate start commands (no &&, ;, |, bash)
+- No user Dockerfiles
+- No exposing container IDs
+- Audit all sensitive actions
+- Rate-limit API endpoints
+
+========================
+REQUIRED API ENDPOINTS
+========================
+
+AUTH
+POST /auth/register
+POST /auth/login
+GET  /auth/me
+
+BOTS (USER OWNERSHIP)
+POST   /bots
+GET    /bots
+POST   /bots/{bot_id}/upload
+POST   /bots/{bot_id}/start
+POST   /bots/{bot_id}/stop
+POST   /bots/{bot_id}/restart
+
+LOGS
+WS     /bots/{bot_id}/logs
+
+ADMIN
+GET    /admin/users
+POST   /admin/users/{user_id}/suspend
+
+========================
+DELIVERABLES
+========================
+- Complete FastAPI backend code
+- Minimal file count
+- Clean, readable Python
+- Clear comments explaining security decisions
+- No placeholder logic
+- No demo shortcuts
+
+DO NOT:
+- Rewrite requirements
+- Skip ownership checks
+- Use subprocess with user input
+- Expose Docker directly
+- Overcomplicate the structure
+
+Build this like a REAL production backend.
